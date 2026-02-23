@@ -25,34 +25,26 @@ def eh_primo(x):
 
 def encontrar_primos_no_intervalo(inicio, quantidade, n_workers):
     """
-    Encontra numeros primos em um intervalo usando ProcessPoolExecutor
-    Retorna: (lista de primos, tempo de coleta de resultados, tempo total)
+    Versao otimizada usando map + chunksize
     """
     intervalo = range(inicio, inicio + quantidade)
 
     start_total = timer()
-    primos = []
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=n_workers) as executor:
-        futures = [executor.submit(eh_primo, num) for num in intervalo]
+        # chunksize reduz overhead de comunicação
+        resultados = executor.map(eh_primo, intervalo, chunksize=200)
 
-        start_coleta = timer()
-
-        for future in concurrent.futures.as_completed(futures):
-            resultado = future.result()
-            if resultado is not None:
-                primos.append(resultado)
-
-        tempo_coleta = timer() - start_coleta
+        primos = [r for r in resultados if r is not None]
 
     tempo_total = timer() - start_total
 
-    return primos, tempo_coleta, tempo_total
+    return primos, tempo_total
 
 
 def main():
     _inicio = 10**13
-    _quantidade = 100000
+    _quantidade = 1000  # Aumentado para gerar carga real
     _max_workers = multiprocessing.cpu_count()
 
     print(f"Testando intervalo: {_inicio:,} ate {_inicio + _quantidade:,}")
@@ -62,9 +54,9 @@ def main():
     tempos_totais = []
 
     for n_workers in range(1, _max_workers + 1):
-        print(f"\nTestando com {n_workers} processo(s)")
+        print(f"Testando com {n_workers} processo(s)")
 
-        primos, t_coleta, t_total = encontrar_primos_no_intervalo(
+        primos, t_total = encontrar_primos_no_intervalo(
             _inicio, _quantidade, n_workers
         )
 
